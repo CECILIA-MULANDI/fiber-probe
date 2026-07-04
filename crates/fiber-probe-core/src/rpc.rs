@@ -1,23 +1,24 @@
 use serde::{Deserialize, Serialize};
 #[derive(Serialize, Debug)]
-struct RpcRequest<P> {
-    jsonrpc: &'static str,
-    id: u64,
-    method: &'static str,
-    params: P,
+pub struct RpcRequest<P> {
+    pub jsonrpc: &'static str,
+    pub id: u64,
+    pub method: &'static str,
+    pub params: P,
+}
+#[derive(Deserialize, Debug, thiserror::Error)]
+#[error("[{code}] {message}")]
+pub struct RpcError {
+    pub code: i64,
+    pub message: String,
+    pub data: Option<serde_json::Value>,
 }
 #[derive(Deserialize, Debug)]
-struct RpcError {
-    code: i64,
-    message: String,
-    data: Option<serde_json::Value>,
-}
-#[derive(Deserialize, Debug)]
-struct RpcResponse<R> {
-    jsonrpc: String,
-    id: u64,
+pub struct RpcResponse<R> {
+    pub jsonrpc: String,
+    pub id: u64,
     #[serde(flatten)]
-    payload: Payload<R>,
+    pub payload: Payload<R>,
 }
 #[derive(Deserialize, Debug)]
 #[serde(untagged)]

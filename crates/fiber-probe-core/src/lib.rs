@@ -1,5 +1,5 @@
+pub mod error;
 pub mod hex;
-
 pub mod node_info;
 pub mod rpc;
 pub fn add(left: u64, right: u64) -> u64 {
