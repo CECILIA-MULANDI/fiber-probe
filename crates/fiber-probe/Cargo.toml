@@ -5,3 +5,7 @@ edition = "2024"
 
 [dependencies]
 fiber-probe-core = { path = "../fiber-probe-core" }
+clap = { version = "4", features = ["derive"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+anyhow = "1"
+serde_json = "1"
