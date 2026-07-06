@@ -2,6 +2,7 @@ use crate::channel::{Channel, ListChannelsResult};
 use crate::error::Result;
 use crate::node_info::NodeInfo;
 use crate::rpc::{Payload, RpcRequest, RpcResponse};
+use crate::summary::NodeSummary;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 pub struct RpcClient {
@@ -69,6 +70,14 @@ impl RpcClient {
             Payload::Result { result } => Ok(result.channels),
             Payload::Error { error } => Err(error.into()),
         }
+    }
+
+    /// Combined snapshot: node identity + every channel it holds.
+    /// Two RPC calls back-to-back.
+    pub async fn summary(&self) -> Result<NodeSummary> {
+        let node = self.node_info().await?;
+        let channels = self.list_channels().await?;
+        Ok(NodeSummary { node, channels })
     }
 }
 

@@ -1,10 +1,12 @@
 pub mod channel;
+pub mod classifier;
 pub mod client;
 pub mod error;
 pub mod hex;
 pub mod node_info;
 pub mod preflight;
 pub mod rpc;
+pub mod summary;
 pub fn add(left: u64, right: u64) -> u64 {
     left + right
 }
