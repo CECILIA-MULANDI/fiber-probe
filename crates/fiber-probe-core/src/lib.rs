@@ -3,6 +3,7 @@ pub mod client;
 pub mod error;
 pub mod hex;
 pub mod node_info;
+pub mod preflight;
 pub mod rpc;
 pub fn add(left: u64, right: u64) -> u64 {
     left + right
