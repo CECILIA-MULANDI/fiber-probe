@@ -22,7 +22,7 @@ pub struct RpcResponse<R> {
 }
 #[derive(Deserialize, Debug)]
 #[serde(untagged)]
-enum Payload<R> {
+pub enum Payload<R> {
     Result { result: R },
     Error { error: RpcError },
 }
