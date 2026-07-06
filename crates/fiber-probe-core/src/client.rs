@@ -1,3 +1,4 @@
+use crate::channel::{Channel, ListChannelsResult};
 use crate::error::Result;
 use crate::node_info::NodeInfo;
 use crate::rpc::{Payload, RpcRequest, RpcResponse};
@@ -42,6 +43,33 @@ impl RpcClient {
             Payload::Error { error } => Err(error.into()),
         }
     }
+    pub async fn list_channels(&self) -> Result<Vec<Channel>> {
+        #[derive(serde::Serialize)]
+        struct Params {
+            #[serde(skip_serializing_if = "Option::is_none")]
+            peer_id: Option<String>,
+        }
+        let id = self.next_id.fetch_add(1, Ordering::Relaxed);
+        let req = RpcRequest {
+            jsonrpc: "2.0",
+            id,
+            method: "list_channels",
+            params: (Params { peer_id: None },),
+        };
+        let bytes = self
+            .http
+            .post(&self.base_url)
+            .json(&req)
+            .send()
+            .await?
+            .bytes()
+            .await?;
+        let parsed_bytes = serde_json::from_slice::<RpcResponse<ListChannelsResult>>(&bytes)?;
+        match parsed_bytes.payload {
+            Payload::Result { result } => Ok(result.channels),
+            Payload::Error { error } => Err(error.into()),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -63,5 +91,22 @@ mod live {
         assert_eq!(info.pubkey.len(), 66); // 33 bytes hex-encoded
         assert!(info.peers_count >= 1); // A is connected to bootnodes at minimum
         assert!(info.version.starts_with("0.9."));
+    }
+    #[tokio::test]
+    #[ignore]
+    async fn calls_real_list_channels() {
+        let client = RpcClient::new("http://127.0.0.1:8227");
+        let channels = client
+            .list_channels()
+            .await
+            .expect("list_channels should succeed");
+        println!("got {} channels:", channels.len());
+        for c in &channels {
+            println!("{:#?}", c);
+        }
+        assert!(
+            !channels.is_empty(),
+            "Node A should have at least the A→C channel"
+        );
     }
 }
