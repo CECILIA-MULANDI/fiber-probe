@@ -1,6 +1,7 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use fiber_probe_core::client::RpcClient;
+use fiber_probe_core::preflight::{self, Asset, FailReason, PreflightResult};
 
 /// Fiber network payment diagnostics
 #[derive(Parser, Debug)]
@@ -31,6 +32,9 @@ enum Command {
         /// Amount in shannons
         #[arg(long)]
         amount: u64,
+        /// Asset to send. `ckb` for native CKB, `udt` for any UDT.
+        #[arg(long, default_value = "ckb")]
+        asset: String,
     },
     /// Classify a payment failure into an actionable category.
     Diagnose {
@@ -65,7 +69,56 @@ async fn main() -> Result<()> {
             }
             Ok(())
         }
-        Command::Check { .. } => todo!("check"),
+        Command::Check { to, amount, asset } => {
+            let asset = match asset.to_lowercase().as_str() {
+                "ckb" => Asset::Ckb,
+                "udt" => Asset::Udt,
+                other => anyhow::bail!("unknown asset: {other}. Try `ckb` or `udt`."),
+            };
+
+            let channels = client.list_channels().await?;
+            let result = preflight::analyze(&channels, &to, amount, asset);
+
+            if cli.json {
+                println!("{}", serde_json::to_string_pretty(&result)?);
+            } else {
+                match &result {
+                    PreflightResult::LikelySuccess => {
+                        println!("✓ Payment likely to succeed via direct channel to {to}");
+                    }
+                    PreflightResult::LikelyFail(reason) => {
+                        println!("✗ Payment likely to fail");
+                        match reason {
+                            FailReason::NoDirectChannel => {
+                                println!("  reason: no channel to peer {to}");
+                            }
+                            FailReason::AssetMismatch => {
+                                println!("  reason: no channel with matching asset to peer {to}");
+                            }
+                            FailReason::ChannelNotReady { state } => {
+                                println!("  reason: channel is in state {state}, not ChannelReady");
+                            }
+                            FailReason::ChannelDisabled => {
+                                println!("  reason: channel is disabled");
+                            }
+                            FailReason::InsufficientLiquidity {
+                                available,
+                                required,
+                            } => {
+                                println!(
+                                    "  reason: need {required} shannons, have {available} available"
+                                );
+                            }
+                        }
+                    }
+                    PreflightResult::Unknown(msg) => {
+                        println!("? Cannot determine: {msg}");
+                    }
+                }
+            }
+            Ok(())
+        }
+
         Command::Diagnose { .. } => todo!("diagnose"),
     }
 }
