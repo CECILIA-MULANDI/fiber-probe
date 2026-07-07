@@ -1,6 +1,7 @@
 use crate::channel::{Channel, ListChannelsResult};
 use crate::error::Result;
 use crate::node_info::NodeInfo;
+use crate::payment::PaymentStatus;
 use crate::rpc::{Payload, RpcRequest, RpcResponse};
 use crate::summary::NodeSummary;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -78,6 +79,39 @@ impl RpcClient {
         let node = self.node_info().await?;
         let channels = self.list_channels().await?;
         Ok(NodeSummary { node, channels })
+    }
+
+    /// Look up a payment session by its 32-byte hash.
+    ///
+    /// Returns `Err(Error::Rpc)` with Fiber's message if the hash isn't known
+    /// (payment was rejected at send time and never created a session). That
+    /// error path is expected — the caller classifies it via the classifier.
+    pub async fn get_payment(&self, hash: &str) -> Result<PaymentStatus> {
+        #[derive(serde::Serialize)]
+        struct Params<'a> {
+            payment_hash: &'a str,
+        }
+
+        let id = self.next_id.fetch_add(1, Ordering::Relaxed);
+        let req = RpcRequest {
+            jsonrpc: "2.0",
+            id,
+            method: "get_payment",
+            params: (Params { payment_hash: hash },),
+        };
+        let bytes = self
+            .http
+            .post(&self.base_url)
+            .json(&req)
+            .send()
+            .await?
+            .bytes()
+            .await?;
+        let parsed = serde_json::from_slice::<RpcResponse<PaymentStatus>>(&bytes)?;
+        match parsed.payload {
+            Payload::Result { result } => Ok(result),
+            Payload::Error { error } => Err(error.into()),
+        }
     }
 }
 

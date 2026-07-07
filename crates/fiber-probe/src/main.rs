@@ -1,8 +1,11 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use colored::Colorize;
+use fiber_probe_core::classifier::{self, Classification};
 use fiber_probe_core::client::RpcClient;
+use fiber_probe_core::error::Error as CoreError;
 use fiber_probe_core::preflight::{self, Asset, FailReason, PreflightResult};
+use fiber_probe_core::rpc::RpcError;
 
 const SHANNONS_PER_CKB: u64 = 100_000_000;
 
@@ -28,6 +31,19 @@ fn short_pubkey(pk: &str) -> String {
     } else {
         pk.to_string()
     }
+}
+
+/// Render a Classification either as pretty terminal output or as JSON.
+fn print_classification(as_json: bool, payment_hash: &str, c: &Classification) -> Result<()> {
+    if as_json {
+        println!("{}", serde_json::to_string_pretty(c)?);
+    } else {
+        println!("{} Payment {payment_hash} failed", "✗".red().bold());
+        println!("  category: {:?}", c.category);
+        println!("  fix:      {}", c.suggested_fix);
+        println!("  raw:      [{}] {}", c.raw_code, c.raw_message);
+    }
+    Ok(())
 }
 
 /// Fiber network payment diagnostics
@@ -192,6 +208,58 @@ async fn main() -> Result<()> {
             Ok(())
         }
 
-        Command::Diagnose { .. } => todo!("diagnose"),
+        Command::Diagnose { payment_hash } => {
+            match client.get_payment(&payment_hash).await {
+                Ok(status) => match status.status.as_str() {
+                    "Success" => {
+                        if cli.json {
+                            println!("{}", serde_json::to_string_pretty(&status)?);
+                        } else {
+                            println!(
+                                "{} Payment {} succeeded",
+                                "✓".green().bold(),
+                                status.payment_hash
+                            );
+                            println!("  fee paid: {}", format_ckb(status.fee));
+                            println!("  nothing to diagnose.");
+                        }
+                    }
+                    "Failed" => {
+                        let raw = status
+                            .failed_error
+                            .as_deref()
+                            .unwrap_or("payment failed with no error message");
+                        // Classifier takes an RpcError; wrap the raw string.
+                        // Code 0 is a sentinel: "not an RPC-layer failure."
+                        let synthetic = RpcError {
+                            code: 0,
+                            message: raw.to_string(),
+                            data: None,
+                        };
+                        let classification = classifier::classify(&synthetic);
+                        print_classification(cli.json, &status.payment_hash, &classification)?;
+                    }
+                    other => {
+                        if cli.json {
+                            println!("{}", serde_json::to_string_pretty(&status)?);
+                        } else {
+                            println!(
+                                "{} Payment {} is {other} — still routing, no diagnosis yet.",
+                                "?".yellow().bold(),
+                                status.payment_hash
+                            );
+                        }
+                    }
+                },
+                Err(CoreError::Rpc(rpc_error)) => {
+                    // Lookup itself failed. Most common cause: hash doesn't
+                    // match a known payment session. Classify Fiber's error.
+                    let classification = classifier::classify(&rpc_error);
+                    print_classification(cli.json, &payment_hash, &classification)?;
+                }
+                Err(other) => return Err(other.into()),
+            }
+            Ok(())
+        }
     }
 }

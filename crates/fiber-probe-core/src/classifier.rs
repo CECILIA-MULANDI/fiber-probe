@@ -64,6 +64,7 @@ fn category_from(err: &RpcError) -> FailureCategory {
         FailureCategory::PeerOffline
     } else if msg.contains("no route")
         || msg.contains("no path")
+        || msg.contains("failed to build route")
         || msg.contains("unreachable destination")
     {
         FailureCategory::NoRoute
@@ -73,6 +74,11 @@ fn category_from(err: &RpcError) -> FailureCategory {
         FailureCategory::ChannelNotReady
     } else if msg.contains("timeout") || msg.contains("expired") || msg.contains("timed out") {
         FailureCategory::Timeout
+    } else if msg.contains("invalidparameter")
+        || msg.contains("invalid parameter")
+        || msg.contains("not found")
+    {
+        FailureCategory::InvalidInput
     } else {
         FailureCategory::Unknown
     }

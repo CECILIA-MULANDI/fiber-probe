@@ -4,6 +4,7 @@ pub mod client;
 pub mod error;
 pub mod hex;
 pub mod node_info;
+pub mod payment;
 pub mod preflight;
 pub mod rpc;
 pub mod summary;
