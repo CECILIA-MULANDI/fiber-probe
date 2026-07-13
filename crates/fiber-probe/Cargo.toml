@@ -1,7 +1,13 @@
 [package]
 name = "fiber-probe"
-version = "0.1.0"
-edition = "2024"
+description = "CLI for Fiber Network payment diagnostics: pre-flight (check), post-hoc classification (diagnose), and node status."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
 
 [dependencies]
 fiber-probe-core = { path = "../fiber-probe-core" }

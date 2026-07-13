@@ -154,3 +154,9 @@ cargo test -p fiber-probe-core                              # 22 unit tests
 cargo test -p fiber-probe-core --lib -- --ignored --nocapture  # live tests against your Fiber node
 ```
 
+## Roadmap and license
+
+Roadmap through Phase 2 (Observability Layer) and Phase 3 (LSP): see [ROADMAP.md](ROADMAP.md).
+
+Dual-licensed under MIT OR Apache-2.0. See [LICENSE-MIT](LICENSE-MIT) and [LICENSE-APACHE](LICENSE-APACHE).
+

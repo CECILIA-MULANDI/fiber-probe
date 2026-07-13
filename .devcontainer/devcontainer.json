@@ -1,0 +1,13 @@
+{
+  "name": "fiber-probe",
+  "image": "mcr.microsoft.com/devcontainers/rust:latest",
+  "postCreateCommand": "cargo build --release && echo '\n=== fiber-probe is ready ===\nTry the zero-setup SDK example:\n  cargo run --example wallet_gate -p fiber-probe-core\n\nSee ./target/release/fiber-probe --help for CLI usage.\nCLI commands need a running Fiber node (see README).'",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "rust-lang.rust-analyzer",
+        "tamasfe.even-better-toml"
+      ]
+    }
+  }
+}

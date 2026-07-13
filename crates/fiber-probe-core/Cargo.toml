@@ -1,7 +1,13 @@
 [package]
 name = "fiber-probe-core"
-version = "0.1.0"
-edition = "2024"
+description = "Fiber Network payment readiness SDK — pre-flight and diagnose primitives for wallets and node operators."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
 
 [dependencies]
 reqwest = { version = "0.12", features = ["json"] }
